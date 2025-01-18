@@ -5,6 +5,7 @@ from pydub import AudioSegment
 from dotenv import load_dotenv
 import mutagen
 import tempfile
+import shutil
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,7 +18,7 @@ slack_webhook_url = os.getenv(
     "SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/your/webhook/url"
 )
 
-desired_bitrate = os.getenv("BITRATE", 256)
+desired_bitrate = int(os.getenv("BITRATE", 256))
 
 # Supported audio file extensions
 SUPPORTED_EXTENSIONS = [
@@ -53,6 +54,9 @@ def convert_to_mp3(input_path):
         # Load the audio file
         audio = AudioSegment.from_file(input_path)
 
+        # Apply the original owner to the new file
+        original_stat = os.stat(input_path)
+
         # Create a temporary file in the system temp directory
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
             temp_output_path = temp_file.name
@@ -63,12 +67,19 @@ def convert_to_mp3(input_path):
         # Define the new path with .mp3 extension
         new_path = os.path.splitext(input_path)[0] + ".mp3"
 
+        # Get the original file permissions
+        original_permissions = os.stat(input_path).st_mode
+
         # Get the original and new file sizes
         original_size = os.path.getsize(input_path)
         new_size = os.path.getsize(temp_output_path)
 
         # Replace the original file with the converted file
-        os.replace(temp_output_path, new_path)
+        shutil.move(temp_output_path, new_path)
+
+        # Apply the original file permissions to the new file
+        os.chmod(new_path, original_permissions)
+        os.chown(new_path, original_stat.st_uid, original_stat.st_gid)
 
         if input_path != new_path:
             # Delete the original file
@@ -103,7 +114,7 @@ def process_directory(input_dir):
                     if bitrate == desired_bitrate:
                         continue
                     elif bitrate and bitrate < desired_bitrate:
-                        print(bitrate)
+                        print(f"Lower bitrate than expected for {file}: {bitrate}kbps")
                         continue
 
                 # Convert the file to MP3 and rename it
