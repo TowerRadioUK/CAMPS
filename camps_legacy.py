@@ -48,7 +48,7 @@ def get_mp3_bitrate(file_path):
 
 def convert_to_mp3(input_path):
     """
-    Convert an audio file to MP3 format
+    Convert an audio file to MP3 format while preserving metadata
     """
     try:
         # Load the audio file
@@ -74,6 +74,12 @@ def convert_to_mp3(input_path):
         original_size = os.path.getsize(input_path)
         new_size = os.path.getsize(temp_output_path)
 
+        # Preserve metadata
+        original_metadata = mutagen.File(input_path)
+        new_metadata = mutagen.File(temp_output_path)
+        new_metadata.update(original_metadata)
+        new_metadata.save()
+
         # Replace the original file with the converted file
         shutil.move(temp_output_path, new_path)
 
@@ -89,6 +95,19 @@ def convert_to_mp3(input_path):
         return original_size - new_size
     except Exception as e:
         print(f"Error converting {input_path}: {e}")
+
+        message = {"text": f"Error converting {input_path} to MP3: {e}"}
+        try:
+            response = requests.post(slack_webhook_url, json=message)
+            if response.status_code == 200:
+                print("Slack notification sent successfully.")
+            else:
+                print(
+                    f"Failed to send Slack notification. Status code: {response.status_code}"
+                )
+        except Exception as e:
+            print(f"Error sending Slack notification: {e}")
+
         return 0
 
 
