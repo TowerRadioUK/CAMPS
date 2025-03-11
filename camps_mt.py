@@ -104,10 +104,7 @@ def convert_to_mp3(input_path):
                 new_metadata["title"] = title
                 new_metadata.save()
                 print(
-                    f"Estimated metadata for {input_path}: Artist - {artist}, Title - {title}"
-                )
-                send_slack_message(
-                    f"Estimated metadata for {input_path}:\nArtist - {artist}, Title - {title}"
+                    f"Estimated metadata for {input_path}: Artist: {artist}, Title: {title}"
                 )
             else:
                 print(f"Could not estimate metadata for {input_path}")
@@ -159,10 +156,7 @@ def process_file(file_path):
                     audio_file.save()
 
                     print(
-                        f"Estimated metadata for {file_path}: Artist - {estimated_artist}, Title - {estimated_title}"
-                    )
-                    send_slack_message(
-                        f"Estimated metadata for {file_path}:\nArtist - {estimated_artist}, Title - {estimated_title}"
+                        f"Estimated metadata for {file_path}: Artist: {estimated_artist}, Title: {estimated_title}"
                     )
                 else:
                     print(f"Could not estimate metadata for {file_path}")
