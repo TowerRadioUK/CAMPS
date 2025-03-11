@@ -4,6 +4,7 @@ import requests
 from pydub import AudioSegment
 from dotenv import load_dotenv
 import mutagen
+import mutagen.mp4
 import tempfile
 import shutil
 import concurrent.futures
@@ -47,6 +48,9 @@ def get_mp3_bitrate(file_path):
         return None
 
 
+import mutagen.mp4
+
+
 def convert_to_mp3(input_path):
     try:
         audio = AudioSegment.from_file(input_path)
@@ -62,18 +66,36 @@ def convert_to_mp3(input_path):
         original_size = os.path.getsize(input_path)
         new_size = os.path.getsize(temp_output_path)
 
+        # Handle metadata based on format
         try:
-            original_metadata = mutagen.File(input_path)
-            new_metadata = mutagen.File(temp_output_path)
-            if original_metadata and new_metadata:
-                new_metadata.update(original_metadata)
+            if input_path.lower().endswith(".m4a"):
+                original_metadata = mutagen.mp4.MP4(input_path)
+                new_metadata = mutagen.File(temp_output_path, easy=True)
+
+                # Extract artist/title if available
+                artist = original_metadata.tags.get("\xa9ART", [""])[0]
+                title = original_metadata.tags.get("\xa9nam", [""])[0]
+
+                if artist:
+                    new_metadata["artist"] = artist
+                if title:
+                    new_metadata["title"] = title
                 new_metadata.save()
+
+            else:
+                # Handle non-MP4 formats
+                original_metadata = mutagen.File(input_path)
+                new_metadata = mutagen.File(temp_output_path)
+                if original_metadata and new_metadata:
+                    new_metadata.update(original_metadata)
+                    new_metadata.save()
+
         except Exception as meta_error:
             print(
                 f"Warning: Skipping metadata for {input_path} due to error: {meta_error}"
             )
 
-            # Estimate artist and title based on the filename
+            # Estimate metadata from filename
             filename = os.path.basename(input_path)
             name, _ = os.path.splitext(filename)
             if " - " in name:
